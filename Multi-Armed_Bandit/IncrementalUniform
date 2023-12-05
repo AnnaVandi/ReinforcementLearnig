@@ -1,0 +1,65 @@
+import numpy as np
+import gym.spaces
+import pandas as pd
+from matplotlib import pyplot as plt
+
+env = gym.make('Taxi-v3')
+state_space = env.observation_space.n
+action_space = env.action_space.n
+qtable = np.zeros((state_space, action_space))# starting with a qtable of zeros
+# Hyperparameters
+epsilon = 1.0  # Greed 100%
+epsilon_min = 0.005  # Greed 0.05%
+epsilon_decay = 0.99995  # Decay multiplied by epsilon after each episode
+episodes = 50000  # Number of episodes (amount of games)
+max_steps = 100  # Max steps per episode
+learning_rate = 0.65  # Learning rate
+gamma = 0.65  # Discount rate
+penalties=0
+rews = []
+
+# Smart agent
+for episode in range(episodes):
+    # reset the game state, done and score before every episode/game
+    state, _ = env.reset()
+    # print(state)
+    done = False
+    score = 0
+
+    for _ in range(max_steps):
+        # with the probability of (1-epsilon) take the best action  in our Q-table
+        if np.random.uniform(0, 1) > epsilon:
+            action = np.argmax(qtable[state, :])
+        else:
+            # else take a random action
+            action = env.action_space.sample()
+
+        # step the game forward
+        # print(env.step(action))
+        state, reward, done, _, _ = env.step(action)
+
+        #update penalties
+        if reward == -10:
+            penalties += 1
+
+        # add up the score
+        score += reward
+
+        # update Q-table with the q-function
+        qtable[state, action] = (1 - learning_rate) * qtable[state, action] + learning_rate * (
+                    reward + gamma * np.max(qtable[state, :]))
+
+        if done:
+            break
+     
+    rews.append(score)
+
+    # reducing epsilon each episode (Exploration vs Exploitation trade-off  )
+    if epsilon >= epsilon_min:
+        epsilon *= epsilon_decay
+        
+#plt.plot(range(episodes), rews, "o")
+plt.scatter(range(episodes), rews, 10, color="red")
+plt.show()
+
+print("Penalties: {}".format(penalties))
